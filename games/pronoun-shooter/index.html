@@ -278,6 +278,7 @@ function shoot(mx, my) {
   for (const t of targets) { if (t.contains(mx, my)) { hit = t; break; } }
   if (!hit) { spawnDrops(mx, my, false, 10); return; }
 
+  gstate = 'animating'; // lock immediately — prevents double-shooting during water stream delay
   streams.push(new Stream(mx, my, hit.cx, hit.cy));
 
   setTimeout(() => {
