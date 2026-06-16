@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grammar Quest · ESL Games</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #030a1a;
+      display: flex; flex-direction: column; align-items: center;
+      min-height: 100vh; font-family: 'Segoe UI', sans-serif; user-select: none;
+    }
+    .top-bar {
+      width: 100%; max-width: 900px;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 16px;
+    }
+    .back-btn { color: #4fc3f7; text-decoration: none; font-size: .9em; opacity: .7; }
+    .back-btn:hover { opacity: 1; }
+    .title { color: #e0e8ff; font-size: 1.1em; font-weight: bold; }
+    canvas { display: block; max-width: 900px; width: 100%;
+      border-radius: 12px; border: 1px solid rgba(79,195,247,.2); }
+    .instructions {
+      max-width: 900px; width: 100%; padding: 10px 16px;
+      color: #64748b; font-size: .82em; text-align: center;
+    }
+    /* Question Modal */
+    #modal {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,10,0.85); z-index: 100;
+      justify-content: center; align-items: center;
+    }
+    #modal.show { display: flex; }
+    .modal-box {
+      background: linear-gradient(145deg, #0f172a, #1e293b);
+      border: 2px solid #3b82f6; border-radius: 20px;
+      padding: 32px 28px; max-width: 520px; width: 92%; text-align: center;
+      animation: popIn .22s ease;
+    }
+    @keyframes popIn { from{transform:scale(.7);opacity:0} to{transform:scale(1);opacity:1} }
+    .modal-tense {
+      display: inline-block;
+      background: rgba(79,195,247,.18); border: 1px solid #4fc3f7;
+      color: #4fc3f7; padding: 4px 14px; border-radius: 20px;
+      font-size: .8em; font-weight:600; letter-spacing:1px;
+      margin-bottom: 12px;
+    }
+    .modal-powerup { font-size: 2.6em; margin-bottom: 8px; }
+    .modal-q { color:#f1f5f9; font-size:1.12em; font-weight:600; line-height:1.6; margin-bottom:22px; }
+    .choices { display:flex; flex-direction:column; gap:10px; }
+    .choice-btn {
+      background: rgba(59,130,246,.12); border: 1.5px solid rgba(59,130,246,.35);
+      color: #e2e8f0; padding: 12px 18px; border-radius: 12px;
+      font-size: .95em; cursor: pointer; transition: background .2s, transform .1s; text-align:left;
+    }
+    .choice-btn:hover { background:rgba(59,130,246,.28); transform:translateX(3px); }
+    .choice-btn.correct { background:rgba(52,211,153,.22); border-color:#34d399; color:#6ee7b7; animation:blink .4s; }
+    .choice-btn.wrong   { background:rgba(248,113,113,.18); border-color:#f87171; color:#fca5a5; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.6} }
+    .modal-hint { color:#64748b; font-size:.82em; margin-top:14px; line-height:1.5; display:none; }
+    .modal-hint.show { display:block; }
+    .cont-btn {
+      margin-top:16px; background:#2563eb; color:#fff; border:none;
+      padding:10px 28px; border-radius:10px; font-size:.95em; cursor:pointer; display:none;
+    }
+    .cont-btn.show { display:inline-block; }
+    /* Mobile controls */
+    .mc { display:none; max-width:900px; width:100%; justify-content:space-between; padding:10px 16px; gap:10px; }
+    @media(max-width:620px){ .mc{display:flex;} }
+    .cb {
+      flex:1; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15);
+      color:#fff; padding:14px 8px; border-radius:10px; font-size:1.3em; cursor:pointer;
+      text-align:center; touch-action:manipulation;
+    }
+    .cb:active { background:rgba(255,255,255,.2); }
+  </style>
+</head>
+<body>
+<div class="top-bar">
+  <a href="../../" class="back-btn">← Back to games</a>
+  <span class="title">⭐ Grammar Quest — Tenses</span>
+  <span></span>
+</div>
+<canvas id="c"></canvas>
+<p class="instructions">Arrow keys / WASD to move · Space or ↑ to jump · Hit the ? blocks from below to answer tense questions!</p>
+<div class="mc">
+  <button class="cb" id="bL">◀</button>
+  <button class="cb" id="bJ">⬆ Jump</button>
+  <button class="cb" id="bR">▶</button>
+</div>
+
+<div id="modal">
+  <div class="modal-box">
+    <div class="modal-powerup" id="mPU"></div>
+    <div class="modal-tense"   id="mTense"></div>
+    <div class="modal-q"       id="mQ"></div>
+    <div class="choices"       id="mC"></div>
+    <div class="modal-hint"    id="mH"></div>
+    <button class="cont-btn"   id="mCont">Continue ▶</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const W = canvas.width  = 900;
+const H = canvas.height = 520;
+
+// ─── Questions — one per tense ────────────────────────────────────
+const QUESTIONS = [
+  {
+    tense: 'Present Simple',
+    q: 'She _____ to school every day.',
+    choices: ['go', 'goes', 'is going'],
+    answer: 1,
+    powerup: '⭐',
+    hint: '💡 Present Simple (3rd person singular): verb + -s / -es\nExample: She goes, He watches, It runs.'
+  },
+  {
+    tense: 'Present Progressive',
+    q: 'Look! They _____ football in the park right now!',
+    choices: ['play', 'played', 'are playing'],
+    answer: 2,
+    powerup: '🌊',
+    hint: '💡 Present Progressive: am / is / are + verb-ing\nUse it for actions happening NOW.'
+  },
+  {
+    tense: 'Present Perfect',
+    q: 'I _____ this movie three times already.',
+    choices: ['see', 'saw', 'have seen'],
+    answer: 2,
+    powerup: '💎',
+    hint: '💡 Present Perfect: have / has + past participle\nUse it to connect past actions to the present.'
+  },
+  {
+    tense: 'Past Simple',
+    q: 'We _____ a great match against Rivera school yesterday.',
+    choices: ['win', 'won', 'have won'],
+    answer: 1,
+    powerup: '🔥',
+    hint: '💡 Past Simple: use the irregular/regular form (verb-ed).\nIt refers to a completed action in the past.'
+  },
+  {
+    tense: 'Past Progressive',
+    q: 'At 8 o\'clock last night, she _____ her homework.',
+    choices: ['did', 'was doing', 'has done'],
+    answer: 1,
+    powerup: '🌈',
+    hint: '💡 Past Progressive: was / were + verb-ing\nFor an action in progress at a specific past moment.'
+  },
+  {
+    tense: 'Past Perfect',
+    q: 'When I arrived, the concert _____ already.',
+    choices: ['started', 'has started', 'had started'],
+    answer: 2,
+    powerup: '🧲',
+    hint: '💡 Past Perfect: had + past participle\nFor an action completed BEFORE another past action.'
+  },
+  {
+    tense: 'Future Simple',
+    q: 'It\'s too heavy — I _____ help you carry it!',
+    choices: ['helped', 'am helping', 'will help'],
+    answer: 2,
+    powerup: '🚀',
+    hint: '💡 Future Simple: will + base verb\nUse it for spontaneous decisions and offers.'
+  },
+  {
+    tense: 'Future Progressive',
+    q: 'At 10 am tomorrow, we _____ for our English exam.',
+    choices: ['study', 'will study', 'will be studying'],
+    answer: 2,
+    powerup: '🎵',
+    hint: '💡 Future Progressive: will be + verb-ing\nFor an action that will be in progress at a future moment.'
+  },
+  {
+    tense: 'Future Perfect',
+    q: 'By the end of June, she _____ all her exams.',
+    choices: ['finishes', 'will finish', 'will have finished'],
+    answer: 2,
+    powerup: '🌟',
+    hint: '💡 Future Perfect: will have + past participle\nFor an action completed BEFORE a future point in time.'
+  },
+];
+
+// ─── Level layout ─────────────────────────────────────────────────
+const GY = 478; // ground y
+
+// Platform: { x, y, w, h, color }
+const PLATFORMS = [
+  { x:0,   y:GY,  w:W,   h:42, color:'#14532d' }, // ground
+
+  // Layer 1 — low platforms
+  { x:40,  y:390, w:130, h:16, color:'#1e40af' },
+  { x:220, y:390, w:130, h:16, color:'#1e40af' },
+  { x:490, y:390, w:130, h:16, color:'#1e40af' },
+  { x:720, y:390, w:130, h:16, color:'#1e40af' },
+
+  // Layer 2 — mid platforms
+  { x:130, y:300, w:120, h:16, color:'#7c2d12' },
+  { x:370, y:300, w:120, h:16, color:'#7c2d12' },
+  { x:630, y:300, w:120, h:16, color:'#7c2d12' },
+
+  // Layer 3 — high platforms
+  { x:50,  y:210, w:110, h:16, color:'#4a1d96' },
+  { x:280, y:210, w:110, h:16, color:'#4a1d96' },
+  { x:510, y:210, w:110, h:16, color:'#4a1d96' },
+  { x:750, y:210, w:110, h:16, color:'#4a1d96' },
+];
+
+// 9 question blocks, one per tense (in order of increasing difficulty height)
+const QB_SIZE = 36;
+const QBLOCKS = [
+  { x:  98, y:352, qi:0, hit:false, bump:0, pu:0 }, // above plat 1 (easy)
+  { x: 278, y:352, qi:1, hit:false, bump:0, pu:0 }, // above plat 2
+  { x: 548, y:352, qi:2, hit:false, bump:0, pu:0 }, // above plat 3
+  { x: 778, y:352, qi:3, hit:false, bump:0, pu:0 }, // above plat 4
+  { x: 188, y:262, qi:4, hit:false, bump:0, pu:0 }, // above mid 1
+  { x: 428, y:262, qi:5, hit:false, bump:0, pu:0 }, // above mid 2
+  { x: 688, y:262, qi:6, hit:false, bump:0, pu:0 }, // above mid 3
+  { x: 335, y:172, qi:7, hit:false, bump:0, pu:0 }, // above high 2
+  { x: 565, y:172, qi:8, hit:false, bump:0, pu:0 }, // above high 3
+];
+
+// ─── Player ───────────────────────────────────────────────────────
+const PL = { x:60, y:GY-44, w:28, h:44, vx:0, vy:0, onGround:false, facing:1, walkT:0, invincible:0 };
+
+// ─── State ────────────────────────────────────────────────────────
+let score=0, lives=3, cleared=0;
+let gstate='playing';
+let particles=[], floaters=[], banners=[];
+const keys = { left:false, right:false, up:false, space:false };
+const mob  = { left:false, right:false, jump:false };
+
+// ─── Physics ──────────────────────────────────────────────────────
+function updatePlayer() {
+  const L = keys.left  || mob.left;
+  const R = keys.right || mob.right;
+  const J = keys.up || keys.space || mob.jump;
+
+  if (L) { PL.vx=-4.5; PL.facing=-1; }
+  else if (R) { PL.vx=4.5; PL.facing=1; }
+  else PL.vx*=0.72;
+
+  if (J && PL.onGround) { PL.vy=-13; PL.onGround=false; }
+
+  PL.vy = Math.min(PL.vy+0.55, 15);
+  PL.x += PL.vx;
+  PL.y += PL.vy;
+  PL.x = Math.max(0, Math.min(W-PL.w, PL.x));
+  PL.onGround = false;
+  if (PL.invincible>0) PL.invincible--;
+
+  // Platform collision
+  for (const p of PLATFORMS) {
+    if (overlap(PL,p)) {
+      if (PL.vy>=0 && PL.y+PL.h-PL.vy <= p.y+2) {
+        PL.y=p.y-PL.h; PL.vy=0; PL.onGround=true;
+      } else if (PL.vy<0 && PL.y-PL.vy >= p.y+p.h-2) {
+        PL.y=p.y+p.h; PL.vy=1;
+      }
+    }
+  }
+
+  // Q-Block collision
+  for (const qb of QBLOCKS) {
+    if (qb.hit) { if(qb.bump>0)qb.bump=Math.max(0,qb.bump-2); if(qb.pu>0)qb.pu--; continue; }
+    const qr = {x:qb.x,y:qb.y,w:QB_SIZE,h:QB_SIZE};
+    if (overlap(PL,qr)) {
+      if (PL.vy<0 && PL.y-PL.vy >= qb.y+QB_SIZE-2) {
+        PL.y=qb.y+QB_SIZE; PL.vy=1; qb.bump=14; activateBlock(qb);
+      } else if (PL.vy>=0 && PL.y+PL.h-PL.vy <= qb.y+2) {
+        PL.y=qb.y-PL.h; PL.vy=0; PL.onGround=true;
+      }
+    }
+    if (qb.bump>0) qb.bump=Math.max(0,qb.bump-1.8);
+  }
+
+  if (PL.y>H+80) {
+    lives--; PL.x=60; PL.y=GY-PL.h; PL.vy=0; PL.vx=0;
+    if(lives<=0) gstate='gameover';
+  }
+
+  if(Math.abs(PL.vx)>0.5) PL.walkT++;
+}
+
+function overlap(a,b) {
+  return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
+}
+
+// ─── Block activation ─────────────────────────────────────────────
+function activateBlock(qb) {
+  gstate='question';
+  const q = QUESTIONS[qb.qi];
+  showModal(q,
+    () => { // correct
+      qb.hit=true; qb.pu=120;
+      cleared++; score+=20;
+      PL.invincible=90;
+      spawnPfx(qb.x+QB_SIZE/2, qb.y, '#fbbf24', 20);
+      spawnFl(qb.x+QB_SIZE/2, qb.y-20, '+20 '+q.powerup, '#fbbf24');
+      banners.push({text:'✓ '+q.tense+' — '+q.powerup, life:160});
+      gstate = cleared>=QBLOCKS.length ? 'win' : 'playing';
+    },
+    () => { // wrong (no penalty — encourage learning)
+      gstate='playing';
+    }
+  );
+}
+
+// ─── Modal ────────────────────────────────────────────────────────
+function showModal(q, onOk, onFail) {
+  document.getElementById('mPU').textContent   = q.powerup;
+  document.getElementById('mTense').textContent = q.tense.toUpperCase();
+  document.getElementById('mQ').textContent    = q.q;
+  document.getElementById('mH').textContent    = q.hint;
+  document.getElementById('mH').className      = 'modal-hint';
+  const cont = document.getElementById('mCont');
+  cont.className = 'cont-btn';
+  const cc = document.getElementById('mC');
+  cc.innerHTML = ''; let answered=false;
+  q.choices.forEach((ch,i) => {
+    const btn=document.createElement('button');
+    btn.className='choice-btn';
+    btn.textContent=`${['A','B','C'][i]}) ${ch}`;
+    btn.onclick=()=>{
+      if(answered)return; answered=true;
+      if(i===q.answer){
+        btn.classList.add('correct');
+        document.getElementById('mH').className='modal-hint show';
+        cont.textContent='Continue ▶'; cont.className='cont-btn show';
+        cont.onclick=()=>{ document.getElementById('modal').classList.remove('show'); onOk(); };
+      } else {
+        btn.classList.add('wrong');
+        cc.children[q.answer].classList.add('correct');
+        document.getElementById('mH').className='modal-hint show';
+        cont.textContent='Try again later ▶'; cont.className='cont-btn show';
+        cont.onclick=()=>{ document.getElementById('modal').classList.remove('show'); onFail(); };
+      }
+    };
+    cc.appendChild(btn);
+  });
+  document.getElementById('modal').classList.add('show');
+}
+
+// ─── Particles / floaters ─────────────────────────────────────────
+function spawnPfx(x,y,color,n){
+  for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=2+Math.random()*5;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-3,life:1,color,size:2+Math.random()*5});}
+}
+function spawnFl(x,y,text,color){floaters.push({x,y,text,color,life:1,vy:-1.2});}
+
+// ─── Drawing ──────────────────────────────────────────────────────
+function drawBG(){
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#0c1445'); g.addColorStop(.65,'#172a6b'); g.addColorStop(1,'#0d1b3e');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  // stars
+  ctx.fillStyle='rgba(255,255,255,.45)';
+  [[70,30],[200,20],[390,50],[540,14],[680,38],[820,24],[155,75],[470,62],[730,80]].forEach(([sx,sy])=>{
+    ctx.beginPath();ctx.arc(sx,sy,1.5,0,Math.PI*2);ctx.fill();
+  });
+  // mountains
+  ctx.fillStyle='rgba(12,25,75,.55)';
+  [[0,360,210,190],[190,390,200,140],[380,350,230,200],[590,375,200,155],[760,360,180,180]].forEach(([mx,my,mw,mh])=>{
+    ctx.beginPath();ctx.moveTo(mx,H);ctx.lineTo(mx+mw/2,my);ctx.lineTo(mx+mw,H);ctx.fill();
+  });
+}
+
+function drawPlatforms(){
+  for(const p of PLATFORMS){
+    ctx.fillStyle='rgba(0,0,0,.25)'; ctx.fillRect(p.x+4,p.y+4,p.w,p.h);
+    ctx.fillStyle=p.color; ctx.fillRect(p.x,p.y,p.w,p.h);
+    ctx.fillStyle='rgba(255,255,255,.1)'; ctx.fillRect(p.x,p.y,p.w,5);
+    if(p.y===GY){ctx.fillStyle='#16a34a';ctx.fillRect(p.x,p.y,p.w,7);}
+  }
+}
+
+function drawQBlocks(){
+  for(const qb of QBLOCKS){
+    const bump=-Math.max(0,Math.sin((14-qb.bump)/14*Math.PI)*qb.bump*1.5);
+    ctx.save(); ctx.translate(qb.x, qb.y+bump);
+    if(qb.hit){
+      // emptied block
+      ctx.fillStyle='#78350f'; ctx.strokeStyle='#451a03'; ctx.lineWidth=2;
+      ctx.fillRect(0,0,QB_SIZE,QB_SIZE); ctx.strokeRect(0,0,QB_SIZE,QB_SIZE);
+      if(qb.pu>0){
+        const emoji=QUESTIONS[qb.qi].powerup;
+        ctx.globalAlpha=qb.pu/120;
+        ctx.font='22px serif'; ctx.textAlign='center';
+        ctx.fillText(emoji, QB_SIZE/2, -(120-qb.pu)*0.5-5);
+        ctx.globalAlpha=1;
+      }
+    } else {
+      // active ?
+      const p=0.07*Math.sin(Date.now()*.005);
+      ctx.fillStyle='#d97706'; ctx.strokeStyle='#92400e'; ctx.lineWidth=2;
+      ctx.fillRect(-p*QB_SIZE,-p*QB_SIZE,QB_SIZE*(1+p*2),QB_SIZE*(1+p*2));
+      ctx.strokeRect(0,0,QB_SIZE,QB_SIZE);
+      ctx.fillStyle='rgba(255,255,200,.22)'; ctx.fillRect(4,4,QB_SIZE-8,8);
+      ctx.fillStyle='#fff'; ctx.font=`bold ${QB_SIZE*.55}px Segoe UI`; ctx.textAlign='center';
+      ctx.fillText('?',QB_SIZE/2,QB_SIZE*.72);
+    }
+    ctx.restore();
+  }
+}
+
+function drawPlayer(){
+  ctx.save();
+  ctx.translate(PL.x+PL.w/2, PL.y+PL.h);
+  if(PL.facing===-1) ctx.scale(-1,1);
+  if(PL.invincible>0 && Math.floor(PL.invincible/5)%2===0){ctx.shadowColor='#fbbf24';ctx.shadowBlur=18;}
+  const bob=PL.onGround?Math.sin(PL.walkT*.35)*1.8:0;
+  const ls=PL.onGround?Math.sin(PL.walkT*.4)*5:0;
+  // Legs
+  ctx.fillStyle='#1e40af';
+  ctx.fillRect(-11,-16+bob,10,16+ls*.3);
+  ctx.fillRect(2,  -16+bob,10,16-ls*.3);
+  // Body
+  ctx.fillStyle='#3b82f6'; ctx.fillRect(-12,-PL.h+bob,24,30);
+  // Head
+  ctx.fillStyle='#fde68a'; ctx.beginPath(); ctx.ellipse(0,-PL.h+bob-8,13,12,0,0,Math.PI*2); ctx.fill();
+  // Eye
+  ctx.fillStyle='#1e293b'; ctx.beginPath(); ctx.arc(5,-PL.h+bob-10,3.5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(6,-PL.h+bob-11,1.4,0,Math.PI*2); ctx.fill();
+  // Smile
+  ctx.strokeStyle='#1e293b'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(0,-PL.h+bob-5,5,.1,Math.PI-.1); ctx.stroke();
+  ctx.restore();
+}
+
+function drawHUD(){
+  ctx.fillStyle='#fbbf24'; ctx.font='bold 17px Segoe UI'; ctx.textAlign='left';
+  ctx.fillText(`Score: ${score}`, 16,30);
+  ctx.fillStyle='#64748b'; ctx.font='13px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText(`Tenses cleared: ${cleared} / ${QBLOCKS.length}`, W/2,30);
+  ctx.font='17px serif'; ctx.textAlign='right';
+  let h=''; for(let i=0;i<3;i++) h+=i<lives?'❤️ ':'🖤 ';
+  ctx.fillText(h.trim(), W-16,30);
+
+  // Banners
+  banners=banners.filter(b=>b.life>0);
+  banners.forEach((b,i)=>{
+    ctx.globalAlpha=Math.min(1,b.life/40);
+    ctx.fillStyle='#34d399'; ctx.font='bold 18px Segoe UI'; ctx.textAlign='center';
+    ctx.fillText('🎉 '+b.text, W/2, 56-i*24);
+    ctx.globalAlpha=1; b.life--;
+  });
+
+  if(cleared===0&&score===0){
+    ctx.fillStyle='rgba(148,163,184,.6)'; ctx.font='13px Segoe UI'; ctx.textAlign='center';
+    ctx.fillText('Hit the ❓ blocks from below — 9 tenses to master!', W/2, H-10);
+  }
+}
+
+function drawOverlay(){
+  if(gstate!=='gameover'&&gstate!=='win') return;
+  ctx.fillStyle='rgba(0,0,10,.82)'; ctx.fillRect(0,0,W,H);
+  ctx.textAlign='center';
+  if(gstate==='win'){
+    ctx.fillStyle='#34d399'; ctx.font='bold 48px Segoe UI';
+    ctx.fillText('🎉 Tense Master! All 9 cleared! 🎉', W/2, H/2-55);
+  } else {
+    ctx.fillStyle='#f87171'; ctx.font='bold 48px Segoe UI';
+    ctx.fillText('Game Over 😢', W/2, H/2-55);
+  }
+  ctx.fillStyle='#f1f5f9'; ctx.font='24px Segoe UI';
+  ctx.fillText(`Score: ${score}   Cleared: ${cleared}/9`, W/2, H/2);
+  ctx.fillStyle='#2563eb';
+  ctx.beginPath(); ctx.roundRect(W/2-110,H/2+42,220,52,10); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 20px Segoe UI';
+  ctx.fillText('▶ Play Again', W/2, H/2+74);
+}
+
+// ─── Reset ────────────────────────────────────────────────────────
+function resetGame(){
+  Object.assign(PL,{x:60,y:GY-44,vx:0,vy:0,onGround:false,facing:1,walkT:0,invincible:0});
+  QBLOCKS.forEach(qb=>{qb.hit=false;qb.bump=0;qb.pu=0;});
+  score=0; lives=3; cleared=0; gstate='playing';
+  particles=[]; floaters=[]; banners=[];
+}
+
+// ─── Loop ─────────────────────────────────────────────────────────
+function loop(){
+  ctx.clearRect(0,0,W,H);
+  drawBG(); drawPlatforms(); drawQBlocks(); drawPlayer();
+  if(gstate==='playing') updatePlayer();
+
+  particles=particles.filter(p=>p.life>0);
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.2;p.life-=.025;
+    ctx.globalAlpha=p.life;ctx.fillStyle=p.color;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2);ctx.fill();
+  }); ctx.globalAlpha=1;
+
+  floaters=floaters.filter(f=>f.life>0);
+  floaters.forEach(f=>{f.y+=f.vy;f.life-=.02;
+    ctx.globalAlpha=f.life;ctx.fillStyle=f.color;
+    ctx.font='bold 14px Segoe UI';ctx.textAlign='center';ctx.fillText(f.text,f.x,f.y);
+  }); ctx.globalAlpha=1;
+
+  if(gstate!=='question') drawHUD();
+  drawOverlay();
+  requestAnimationFrame(loop);
+}
+
+// ─── Input ────────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(['ArrowLeft','a','A'].includes(e.key))  keys.left =true;
+  if(['ArrowRight','d','D'].includes(e.key)) keys.right=true;
+  if(['ArrowUp','w','W'].includes(e.key))    keys.up   =true;
+  if(e.key===' '){keys.space=true;e.preventDefault();}
+});
+document.addEventListener('keyup',e=>{
+  if(['ArrowLeft','a','A'].includes(e.key))  keys.left =false;
+  if(['ArrowRight','d','D'].includes(e.key)) keys.right=false;
+  if(['ArrowUp','w','W'].includes(e.key))    keys.up   =false;
+  if(e.key===' ')  keys.space=false;
+});
+['bL','bR','bJ'].forEach((id,i)=>{
+  const btn=document.getElementById(id);
+  const k=['left','right','jump'][i];
+  btn.addEventListener('touchstart',e=>{e.preventDefault();mob[k]=true;},{passive:false});
+  btn.addEventListener('touchend',  e=>{e.preventDefault();mob[k]=false;},{passive:false});
+});
+canvas.addEventListener('click',e=>{
+  if(gstate!=='gameover'&&gstate!=='win') return;
+  const r=canvas.getBoundingClientRect();
+  const mx=(e.clientX-r.left)*(W/r.width), my=(e.clientY-r.top)*(H/r.height);
+  if(mx>W/2-110&&mx<W/2+110&&my>H/2+42&&my<H/2+94) resetGame();
+});
+
+loop();
+</script>
+</body>
+</html>

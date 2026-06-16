@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESL Game Zone</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #07071a;
+      color: white;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .stars {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .star {
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle var(--dur, 3s) infinite alternate;
+      animation-delay: var(--delay, 0s);
+    }
+
+    @keyframes twinkle {
+      from { opacity: 0.1; transform: scale(0.8); }
+      to   { opacity: 0.9; transform: scale(1.2); }
+    }
+
+    header {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 70px 20px 45px;
+    }
+
+    header h1 {
+      font-size: clamp(2em, 6vw, 3.5em);
+      background: linear-gradient(135deg, #4fc3f7 0%, #a78bfa 50%, #f87171 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 14px;
+      letter-spacing: 2px;
+    }
+
+    header p {
+      font-size: 1.15em;
+      color: #7dd3fc;
+      letter-spacing: 0.5px;
+    }
+
+    .games-grid {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 28px;
+      justify-content: center;
+      padding: 20px 30px 80px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .game-card {
+      background: linear-gradient(145deg, #141432, #1e1458);
+      border: 1px solid rgba(120, 100, 255, 0.25);
+      border-radius: 22px;
+      padding: 38px 28px 30px;
+      width: 310px;
+      text-decoration: none;
+      color: white;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(79,195,247,0.06), rgba(167,139,250,0.06));
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .game-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 22px 50px rgba(79,195,247,0.22);
+      border-color: rgba(79,195,247,0.6);
+    }
+
+    .game-card:hover::before { opacity: 1; }
+
+    .game-icon {
+      font-size: 3.8em;
+      margin-bottom: 16px;
+      display: block;
+      filter: drop-shadow(0 4px 12px rgba(255,255,255,0.3));
+    }
+
+    .game-card h2 {
+      font-size: 1.45em;
+      margin-bottom: 11px;
+      color: #e0e8ff;
+    }
+
+    .game-card p {
+      color: #93c5fd;
+      line-height: 1.65;
+      margin-bottom: 18px;
+      font-size: 0.95em;
+    }
+
+    .badges { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 13px;
+      border-radius: 20px;
+      font-size: 0.78em;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-blue  { background: rgba(79,195,247,0.15); border: 1px solid #4fc3f7; color: #4fc3f7; }
+    .badge-gold  { background: rgba(251,191,36,0.15); border: 1px solid #fbbf24; color: #fbbf24; }
+    .badge-green { background: rgba(52,211,153,0.15); border: 1px solid #34d399; color: #34d399; }
+
+    .play-hint {
+      position: absolute;
+      bottom: 14px;
+      right: 18px;
+      font-size: 0.8em;
+      color: rgba(255,255,255,0.3);
+      transition: color 0.3s;
+    }
+    .game-card:hover .play-hint { color: #4fc3f7; }
+
+    footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 24px;
+      color: #334155;
+      font-size: 0.88em;
+    }
+  </style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<header>
+  <h1>🎮 ESL Game Zone</h1>
+  <p>Interactive English games for intermediate learners (B1–B2)</p>
+</header>
+
+<main class="games-grid">
+
+  <a href="games/pronoun-shooter/" class="game-card">
+    <span class="game-icon">💦</span>
+    <h2>Pronoun Shooter</h2>
+    <p>Read the sentence and shoot the correct pronoun target with your water gun before the timer runs out!</p>
+    <div class="badges">
+      <span class="badge badge-blue">Pronouns</span>
+      <span class="badge badge-gold">B1</span>
+    </div>
+    <span class="play-hint">▶ Play →</span>
+  </a>
+
+  <a href="games/grammar-train/" class="game-card">
+    <span class="game-icon">🚂</span>
+    <h2>Grammar Express</h2>
+    <p>Boxes float down from the sky — tap the right ones so they land on the correct grammar wagon!</p>
+    <div class="badges">
+      <span class="badge badge-blue">Verb Tenses</span>
+      <span class="badge badge-gold">B1–B2</span>
+    </div>
+    <span class="play-hint">▶ Play →</span>
+  </a>
+
+  <a href="games/platform-quest/" class="game-card">
+    <span class="game-icon">⭐</span>
+    <h2>Grammar Quest</h2>
+    <p>Jump through platforms and smash question boxes — answer correctly to grab power-ups and survive!</p>
+    <div class="badges">
+      <span class="badge badge-blue">Mixed Grammar</span>
+      <span class="badge badge-gold">B2</span>
+    </div>
+    <span class="play-hint">▶ Play →</span>
+  </a>
+
+</main>
+
+<footer>
+  ESL Game Zone · Made with ♥ for English learners
+</footer>
+
+<script>
+  const container = document.getElementById('stars');
+  for (let i = 0; i < 90; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const sz = Math.random() * 2.5 + 0.5;
+    s.style.cssText = [
+      `width:${sz}px`, `height:${sz}px`,
+      `left:${Math.random()*100}%`, `top:${Math.random()*100}%`,
+      `--dur:${(2 + Math.random()*3).toFixed(1)}s`,
+      `--delay:${(Math.random()*3).toFixed(1)}s`
+    ].join(';');
+    container.appendChild(s);
+  }
+</script>
+</body>
+</html>
